@@ -1,0 +1,176 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+  background: #0a0f1f;
+  color: #fff;
+}
+
+/* Layout */
+.layout { display: flex; }
+
+/* Sidebar */
+.sidebar {
+  width: 260px;
+  background: #0d1326;
+  padding: 20px;
+  border-right: 1px solid #1f2937;
+}
+
+.brand { display: flex; gap: 10px; align-items: center; }
+.brand h2 { margin: 0; }
+.brand p { margin: 0; font-size: 12px; color: #aaa; }
+
+.logo {
+  font-size: 26px;
+}
+
+.side-card {
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.success { background: #064e3b; }
+.tip { background: #312e81; }
+
+.side-section { margin-top: 20px; }
+.side-section ul { padding: 0; list-style: none; }
+.side-section li { margin: 6px 0; }
+
+/* Main */
+.main { flex: 1; padding: 20px; }
+
+.header p { color: #aaa; }
+
+/* Tabs */
+.tabs {
+  margin: 15px 0;
+}
+.tabs button {
+  background: transparent;
+  border: none;
+  color: #aaa;
+  margin-right: 10px;
+}
+.tabs .active { color: #fff; border-bottom: 2px solid #6366f1; }
+
+/* Panel */
+.panel { display: flex; gap: 20px; }
+
+.panel-left {
+  width: 300px;
+  background: #111827;
+  padding: 15px;
+  border-radius: 12px;
+}
+
+.panel-left input, select {
+  width: 100%;
+  margin: 10px 0;
+  padding: 8px;
+  background: #020617;
+  border: 1px solid #333;
+  color: white;
+}
+
+.primary {
+  width: 100%;
+  background: linear-gradient(90deg,#6366f1,#9333ea);
+  border: none;
+  padding: 10px;
+  border-radius: 10px;
+  color: white;
+}
+
+/* Cards */
+.cards {
+  display: flex;
+  gap: 15px;
+}
+
+.card {
+  flex: 1;
+  background: linear-gradient(145deg,#020617,#111827);
+  padding: 15px;
+  border-radius: 12px;
+}
+
+/* Donut */
+.donut {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: conic-gradient(#22c55e 80%, #1f2937 0%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.donut-inner {
+  text-align: center;
+}
+
+/* Bars */
+.bar-row { margin-top: 10px; }
+.bar-label { display: flex; justify-content: space-between; font-size: 14px; }
+.bar-track {
+  height: 8px;
+  background: #1f2937;
+  border-radius: 5px;
+}
+.bar-fill {
+  height: 8px;
+  background: linear-gradient(90deg,#22c55e,#6366f1);
+  border-radius: 5px;
+}
+
+/* Skills */
+.skills { margin-top: 15px; }
+
+.chip {
+  display:inline-block;
+  padding:6px 12px;
+  margin:5px;
+  border-radius:20px;
+  background:#1f2937;
+}
+
+.chip.green { color:#22c55e; }
+.chip.red { color:#ef4444; }
+
+/* Status */
+.status {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+}
+.title {
+  font-size: 32px;
+  font-weight: bold;
+
+  /* Gradient colors */
+  background: linear-gradient(
+    90deg,
+    #22c55e,
+    #3b82f6,
+    #9333ea,
+    #f59e0b,
+    #22c55e
+  );
+
+  background-size: 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+
+  animation: gradientMove 5s linear infinite;
+
+  /* Glow effect */
+  text-shadow: 0 0 10px rgba(147,51,234,0.7),
+               0 0 20px rgba(59,130,246,0.5);
+}
+
+@keyframes gradientMove {
+  0% { background-position: 0% }
+  100% { background-position: 300% }
+}
