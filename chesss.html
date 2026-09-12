@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simple Chess — HTML/CSS/JS</title>
+  <style>
+    :root{
+      --light: Black; --dark: white; --accent: red;
+    }
+    body{font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; margin:20px; display:flex; gap:20px; align-items:flex-start}
+    .board-wrap{display:grid; grid-template-columns: auto 1fr; gap:12px}
+    .board{width:480px; height:480px; display:grid; grid-template-columns: repeat(8,1fr); border:4px solid #333; box-shadow: 0 6px 18px rgba(0,0,0,0.12)}
+    .square{width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:30px; user-select:none; cursor:pointer}
+    .light{background:var(--light)}
+    .dark{background:var(--dark)}
+    .square.highlight{outline:4px solid rgba(76,175,80,0.45);}
+    .square.capture{outline:4px solid rgba(255,0,0,0.45);}
+    .square.selected{box-shadow: inset 0 0 0 4px rgba(0,0,0,0.12)}
+
+    .sidebar{width:360px}
+    .controls{display:flex; gap:8px; margin-bottom:12px}
+    button{padding:8px 10px; border-radius:6px; border:1px solid #ccc; background:white; cursor:pointer}
+    .status{margin-bottom:8px}
+    .moves{height:380px; overflow:auto; background:#fafafa; padding:8px; border-radius:6px; border:1px solid #eee}
+
+    .small{font-size:13px; color:#555}
+    .footer{margin-top:10px; font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="board-wrap">
+    <div>
+      <div class="board" id="board" role="application" aria-label="Chessboard"></div>
+    </div>
+
+    <div class="sidebar">
+      <div class="controls">
+        <button id="resetBtn">Reset</button>
+        <button id="undoBtn">Undo</button>
+        <button id="flipBtn">Flip</button>
+      </div>
+      <div class="status"><strong>Turn:</strong> <span id="turn">White</span></div>
+      <div class="status small"><strong>Selected:</strong> <span id="selected">None</span></div>
+      <div class="moves" id="moves"></div>
+      <div class="footer small">Click a piece to select, then click a highlighted square to move. Promotion to Queen only. Basic legal moves enforced (no check detection).</div>
+    </div>
+  </div>
+
+<script>
+// Simple chess implementation (single-file). Notes: en-passant, full check/checkmate detection, and castling omitted for brevity.
+const boardEl = document.getElementById('board');
+const movesEl = document.getElementById('moves');
+const turnEl = document.getElementById('turn');
+const selectedEl = document.getElementById('selected');
+let flipped = false;
+
+// Unicode pieces
+const PIECES = {
+  wK:'\u2654', wQ:'\u2655', wR:'\u2656', wB:'\u2657', wN:'\u2658', wP:'\u2659',
+  bK:'\u265A', bQ:'\u265B', bR:'\u265C', bB:'\u265D', bN:'\u265E', bP:'\u265F',
+};
+
+let game = {
+  board: [], // 8x8 array of piece codes or null
+  turn: 'w',
+  selected: null,
+  history: [],
+}
+
+function cloneBoard(b){ return b.map(r => r.slice()); }
+
+function resetGame(){
+  const start = [
+    ['bR','bN','bB','bQ','bK','bB','bN','bR'],
+    Array(8).fill('bP'),
+    Array(8).fill(null),
+    Array(8).fill(null),
+    Array(8).fill(null),
+    Array(8).fill(null),
+    Array(8).fill('wP'),
+    ['wR','wN','wB','wQ','wK','wB','wN','wR']
+  ];
+  game.board = start;
+  game.turn = 'w';
+  game.selected = null;
+  game.history = [];
+  render();
+  renderMoves();
+}
+
+function render(){
+  boardEl.innerHTML='';
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      const rr = flipped ? 7-r : r;
+      const cc = flipped ? 7-c : c;
+      const square = document.createElement('div');
+      square.className = 'square ' + (((rr+c)%2===0)?'light':'dark');
+      square.dataset.r = rr; square.dataset.c = cc;
+      const piece = game.board[rr][cc];
+      if(piece) square.textContent = PIECES[piece];
+      square.addEventListener('click', onSquareClick);
+      boardEl.appendChild(square);
+    }
+  }
+  document.getElementById('turn').textContent = game.turn==='w'?'White':'Black';
+  document.getElementById('selected').textContent = game.selected?`${game.selected.r},${game.selected.c}`:'None';
+}
+
+function onSquareClick(e){
+  const r = parseInt(e.currentTarget.dataset.r);
+  const c = parseInt(e.currentTarget.dataset.c);
+  const piece = game.board[r][c];
+  if(game.selected){
+    // if clicked on highlighted move square
+    const moves = getLegalMoves(game.selected.r, game.selected.c, true);
+    const found = moves.find(m => m.r===r && m.c===c);
+    if(found){
+      makeMove(game.selected.r, game.selected.c, r, c, found);
+      game.selected = null;
+      clearHighlights();
+      render();
+      renderMoves();
+      return;
+    }
+  }
+  // select if piece of current color
+  if(piece && piece[0]===game.turn){
+    game.selected = {r,c};
+    clearHighlights();
+    highlightSquare(r,c,'selected');
+    const moves = getLegalMoves(r,c,true);
+    moves.forEach(m=> highlightSquare(m.r,m.c, m.capture? 'capture':'highlight'));
+  } else {
+    // click empty or opponent — clear selection
+    game.selected = null;
+    clearHighlights();
+  }
+}
+
+function highlightSquare(r,c,cls){
+  const index = (flipped ? (7-r) : r)*8 + (flipped ? (7-c) : c);
+  const el = boardEl.children[index];
+  if(!el) return;
+  el.classList.add(cls);
+}
+function clearHighlights(){
+  Array.from(boardEl.children).forEach(ch => ch.classList.remove('highlight','capture','selected'));
+}
+
+function makeMove(sr,sc,tr,tc,meta){
+  const piece = game.board[sr][sc];
+  const captured = game.board[tr][tc];
+  // push to history
+  game.history.push({board:cloneBoard(game.board), turn:game.turn, move:`${piece}@${sr}${sc}->${tr}${tc}`});
+  // move
+  game.board[tr][tc] = piece;
+  game.board[sr][sc] = null;
+  // promotion
+  if(piece[1]==='P' && (tr===0 || tr===7)){
+    game.board[tr][tc] = game.turn+'Q';
+  }
+  // switch turn
+  game.turn = game.turn==='w' ? 'b' : 'w';
+}
+
+function renderMoves(){
+  movesEl.innerHTML='';
+  game.history.forEach((h,i)=>{
+    const d = document.createElement('div');
+    d.textContent = `${i+1}. ${h.move}`;
+    movesEl.appendChild(d);
+  });
+}
+
+function undo(){
+  if(game.history.length===0) return;
+  const last = game.history.pop();
+  game.board = cloneBoard(last.board);
+  game.turn = last.turn;
+  game.selected = null;
+  clearHighlights();
+  render();
+  renderMoves();
+}
+
+// Simple move generators for each piece (does NOT test for check state)
+function getLegalMoves(r,c,onlyInsideBoard){
+  const piece = game.board[r][c];
+  if(!piece) return [];
+  const color = piece[0];
+  const type = piece[1];
+  const moves = [];
+  const add = (rr,cc, capture=false)=>{
+    if(rr<0||rr>7||cc<0||cc>7) return;
+    const target = game.board[rr][cc];
+    if(target===null){ if(!capture) moves.push({r:rr,c:cc}); }
+    else if(target[0]!==color) moves.push({r:rr,c:cc, capture:true});
+  }
+  if(type==='P'){
+    const dir = color==='w' ? -1 : 1;
+    // forward
+    if(r+dir>=0 && r+dir<=7 && !game.board[r+dir][c]) add(r+dir,c,false);
+    // double
+    const startRow = color==='w'?6:1;
+    if(r===startRow && !game.board[r+dir][c] && !game.board[r+2*dir][c]) add(r+2*dir,c,false);
+    // captures
+    for(const dc of [-1,1]){
+      const rr = r+dir, cc = c+dc;
+      if(rr>=0 && rr<=7 && cc>=0 && cc<=7){
+        const t = game.board[rr][cc];
+        if(t && t[0]!==color) add(rr,cc,true);
+      }
+    }
+  } else if(type==='N'){
+    const deltas = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+    deltas.forEach(d=> add(r+d[0], c+d[1]));
+  } else if(type==='B' || type==='R' || type==='Q'){
+    const dirs = [];
+    if(type==='B' || type==='Q') dirs.push([-1,-1],[-1,1],[1,-1],[1,1]);
+    if(type==='R' || type==='Q') dirs.push([-1,0],[1,0],[0,-1],[0,1]);
+    for(const d of dirs){
+      let rr=r+d[0], cc=c+d[1];
+      while(rr>=0 && rr<8 && cc>=0 && cc<8){
+        const t = game.board[rr][cc];
+        if(t===null) { add(rr,cc); }
+        else { if(t[0]!==piece[0]) add(rr,cc,true); break; }
+        rr+=d[0]; cc+=d[1];
+      }
+    }
+  } else if(type==='K'){
+    for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++) if(dr!==0||dc!==0) add(r+dr,c+dc);
+    // Note: castling omitted for simplicity.
+  }
+  // filter moves by turn (can't move opponent pieces)
+  return moves;
+}
+
+// Buttons
+document.getElementById('resetBtn').addEventListener('click', resetGame);
+document.getElementById('undoBtn').addEventListener('click', undo);
+document.getElementById('flipBtn').addEventListener('click', ()=>{flipped=!flipped; render(); clearHighlights();});
+
+// keyboard: U = undo
+window.addEventListener('keydown', e=>{ if(e.key.toLowerCase()==='u') undo(); });
+
+resetGame();
+</script>
+</body>
+</html>
